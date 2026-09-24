@@ -312,7 +312,7 @@
 
       margin-top: 17px;
 
-      padding: 17px;
+      padding: 18px;
 
       border-radius: 12px;
 
@@ -326,6 +326,8 @@
       font-size: 32px;
 
       margin-bottom: 7px;
+
+      line-height: 1;
 
     }
 
@@ -350,7 +352,9 @@
     }
 
 
-    /* SUCCESS */
+    /* ====================================
+       SUCCESS
+       ==================================== */
 
     .status-success {
 
@@ -366,7 +370,9 @@
     }
 
 
-    /* DUPLICATE */
+    /* ====================================
+       DUPLICATE
+       ==================================== */
 
     .status-duplicate {
 
@@ -382,7 +388,9 @@
     }
 
 
-    /* INVALID */
+    /* ====================================
+       INVALID
+       ==================================== */
 
     .status-invalid {
 
@@ -398,7 +406,9 @@
     }
 
 
-    /* ERROR */
+    /* ====================================
+       ERROR
+       ==================================== */
 
     .status-error {
 
@@ -410,6 +420,60 @@
         1px solid #ffd2d2;
 
       color: #b42318;
+
+    }
+
+
+    /* ====================================
+       PROCESSING
+       ==================================== */
+
+    .status-processing {
+
+      display: block;
+
+      background: #f2fbfb;
+
+      border:
+        1px solid #c9eeee;
+
+      color: #087777;
+
+    }
+
+
+    .spinner {
+
+      width: 34px;
+
+      height: 34px;
+
+      margin:
+        0 auto 12px auto;
+
+      border:
+        3px solid #d5eeee;
+
+      border-top:
+        3px solid #00a6a6;
+
+      border-radius: 50%;
+
+      animation:
+        spin 0.8s linear infinite;
+
+    }
+
+
+    @keyframes spin {
+
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
 
     }
 
@@ -472,21 +536,8 @@
 
 
     /* ====================================
-       LOADING
+       RESPONSIVE
        ==================================== */
-
-    .loading {
-
-      text-align: center;
-
-      color: #777777;
-
-      font-size: 13px;
-
-      padding: 12px;
-
-    }
-
 
     @media (max-width: 420px) {
 
@@ -796,12 +847,109 @@ function onScanSuccess(
   isProcessing = true;
 
 
+  /*
+   * IMPORTANT:
+   *
+   * Show the processing message FIRST.
+   *
+   * This happens immediately when the QR
+   * is detected, before the Apps Script
+   * request is sent.
+   */
+
+  showProcessing();
+
+
+  /*
+   * Stop camera scanning while the
+   * attendance request is being processed.
+   */
+
   stopScanner();
 
 
-  verifyAttendance(
-    decodedText
+  /*
+   * Give the browser a tiny moment to
+   * render the processing UI before
+   * starting the network request.
+   */
+
+  setTimeout(
+    function() {
+
+      verifyAttendance(
+        decodedText
+      );
+
+    },
+    80
   );
+
+}
+
+
+/* ==========================================
+   SHOW PROCESSING
+   ========================================== */
+
+function showProcessing() {
+
+  const box =
+    document.getElementById(
+      "statusBox"
+    );
+
+
+  const icon =
+    document.getElementById(
+      "statusIcon"
+    );
+
+
+  const titleElement =
+    document.getElementById(
+      "statusTitle"
+    );
+
+
+  const messageElement =
+    document.getElementById(
+      "statusMessage"
+    );
+
+
+  box.className =
+    "status-box status-processing";
+
+
+  /*
+   * Spinner is inserted here.
+   */
+
+  icon.innerHTML =
+    '<div class="spinner"></div>';
+
+
+  titleElement.textContent =
+    "Processing Attendance";
+
+
+  messageElement.textContent =
+    "QR code detected. Verifying client attendance...";
+
+
+  box.style.display =
+    "block";
+
+
+  /*
+   * Keep Scan Next hidden while processing.
+   */
+
+  document.getElementById(
+    "scanNextButton"
+  ).style.display =
+    "none";
 
 }
 
@@ -848,35 +996,16 @@ function verifyAttendance(
 
 
         /*
-         * ACTUAL APPS SCRIPT RESPONSE FORMAT
-         *
-         * Example:
+         * ACTUAL DUPLICATE RESPONSE:
          *
          * {
          *   success: true,
          *   status: "DUPLICATE",
-         *   message: "Already Checked In",
-         *   registrationId: "M004-002",
-         *   meetingId: "M004",
-         *   name: "pppppppppp",
-         *   checkInTime: "..."
+         *   name: "...",
+         *   registrationId: "...",
+         *   ...
          * }
-         *
-         * Therefore we use:
-         *
-         * response.status
-         * response.name
-         *
-         * NOT:
-         *
-         * response.type
-         * response.clientName
          */
-
-
-        /* ==================================
-           DUPLICATE
-           ================================== */
 
         if (
           response.status === "DUPLICATE"
@@ -899,7 +1028,7 @@ function verifyAttendance(
 
 
         /* ==================================
-           INVALID
+           INVALID QR
            ================================== */
 
         if (
@@ -920,17 +1049,7 @@ function verifyAttendance(
 
         /* ==================================
            SUCCESSFUL CHECK-IN
-           ==================================
-
-           Apps Script uses:
-
-           success: true
-
-           for a successful check-in.
-
-           We therefore don't require a
-           separate "type" field.
-        */
+           ================================== */
 
         if (
           response.success === true
@@ -1085,7 +1204,7 @@ function formatCheckInTime(
 
 
 /* ==========================================
-   SHOW STATUS
+   SHOW FINAL STATUS
    ========================================== */
 
 function showStatus(
@@ -1123,6 +1242,11 @@ function showStatus(
     type;
 
 
+  /*
+   * Restore the normal icon after
+   * processing spinner.
+   */
+
   if (
     type === "success" ||
     type === "duplicate"
@@ -1150,6 +1274,11 @@ function showStatus(
   box.style.display =
     "block";
 
+
+  /*
+   * Scan Next only appears after
+   * processing is complete.
+   */
 
   document.getElementById(
     "scanNextButton"
@@ -1181,27 +1310,8 @@ function startScanner() {
 
 
   /*
-   * If an old scanner instance exists,
-   * don't create another one.
+   * Create a fresh scanner instance.
    */
-
-  if (html5QrCode) {
-
-    try {
-
-      html5QrCode.clear();
-
-    } catch (error) {
-
-      console.log(
-        "Scanner clear:",
-        error
-      );
-
-    }
-
-  }
-
 
   html5QrCode =
     new Html5Qrcode(
@@ -1236,7 +1346,11 @@ function startScanner() {
 
       function(errorMessage) {
 
-        // Ignore continuous scanner errors.
+        /*
+         * Ignore continuous scanner
+         * errors generated while camera
+         * is searching for a QR.
+         */
 
       }
 
@@ -1340,6 +1454,11 @@ function scanNext() {
 window.addEventListener(
   "load",
   function() {
+
+    /*
+     * Load meeting information and
+     * start the camera simultaneously.
+     */
 
     loadMeeting();
 
