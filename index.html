@@ -7,12 +7,21 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+    content="width=device-width, initial-scale=1.0">
 
-  <title>Vaghela & Company - Attendance</title>
+  <meta
+    name="theme-color"
+    content="#00a6a6">
+
+  <title>
+    Vaghela & Company - Attendance
+  </title>
+
+
+  <!-- QR SCANNER LIBRARY -->
 
   <script src="https://unpkg.com/html5-qrcode"></script>
+
 
   <style>
 
@@ -20,115 +29,479 @@
       box-sizing: border-box;
     }
 
+
     body {
+
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #f7f9fb;
-      color: #111;
+
+      padding: 18px;
+
+      min-height: 100vh;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+      background:
+        linear-gradient(
+          180deg,
+          #ffffff 0%,
+          #f6fbfb 100%
+        );
+
+      color: #111111;
+
     }
+
 
     .container {
+
+      width: 100%;
+
       max-width: 500px;
-      margin: auto;
-      padding: 24px 18px 40px;
+
+      margin: 0 auto;
+
     }
+
+
+    /* ====================================
+       BRAND
+       ==================================== */
 
     .brand {
+
       text-align: center;
-      font-size: 26px;
-      font-weight: 700;
-      margin-top: 10px;
-      margin-bottom: 4px;
+
+      padding-top: 8px;
+
+      margin-bottom: 20px;
+
     }
 
-    .subtitle {
-      text-align: center;
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 22px;
+
+    .brand-name {
+
+      font-size: 27px;
+
+      font-weight: 700;
+
+      letter-spacing: -0.5px;
+
     }
+
+
+    .brand-name span {
+
+      color: #00a6a6;
+
+    }
+
+
+    .tagline {
+
+      margin-top: 5px;
+
+      font-size: 11px;
+
+      font-weight: 600;
+
+      letter-spacing: 2px;
+
+      color: #555555;
+
+    }
+
+
+    /* ====================================
+       MEETING CARD
+       ==================================== */
+
+    .meeting-card {
+
+      background: #ffffff;
+
+      border:
+        1px solid #eeeeee;
+
+      border-radius: 16px;
+
+      padding: 17px;
+
+      margin-bottom: 15px;
+
+      box-shadow:
+        0 5px 20px
+        rgba(0, 0, 0, 0.05);
+
+      text-align: center;
+
+    }
+
+
+    .meeting-label {
+
+      font-size: 10px;
+
+      font-weight: 700;
+
+      letter-spacing: 1.2px;
+
+      color: #00a6a6;
+
+      text-transform: uppercase;
+
+      margin-bottom: 6px;
+
+    }
+
+
+    #meetingTopic {
+
+      font-size: 19px;
+
+      font-weight: 700;
+
+      line-height: 1.3;
+
+      margin-bottom: 6px;
+
+    }
+
+
+    #meetingDate {
+
+      font-size: 13px;
+
+      color: #666666;
+
+    }
+
+
+    /* ====================================
+       SCANNER CARD
+       ==================================== */
+
+    .scanner-card {
+
+      background: #ffffff;
+
+      border:
+        1px solid #eeeeee;
+
+      border-radius: 18px;
+
+      padding: 18px;
+
+      box-shadow:
+        0 8px 30px
+        rgba(0, 0, 0, 0.07);
+
+    }
+
+
+    .scanner-title {
+
+      font-size: 20px;
+
+      font-weight: 700;
+
+      text-align: center;
+
+      margin-bottom: 5px;
+
+    }
+
+
+    .scanner-subtitle {
+
+      font-size: 13px;
+
+      color: #777777;
+
+      text-align: center;
+
+      margin-bottom: 17px;
+
+    }
+
+
+    /* ====================================
+       QR SCANNER
+       ==================================== */
 
     #reader {
-      width: 100%;
-      background: #000;
-      border-radius: 16px;
-      overflow: hidden;
-    }
 
-    .status {
-      display: none;
-      margin-top: 20px;
-      padding: 22px;
+      width: 100%;
+
+      border:
+        none !important;
+
       border-radius: 14px;
-      text-align: center;
+
+      overflow: hidden;
+
+      background: #f5f5f5;
+
     }
 
-    .status.success {
-      display: block;
-      background: #e9f8ee;
-      border: 1px solid #9ad6ad;
+
+    #reader video {
+
+      border-radius: 14px;
+
     }
 
-    .status.duplicate {
-      display: block;
-      background: #fff4dc;
-      border: 1px solid #e7c46c;
+
+    #reader__dashboard {
+
+      padding: 10px !important;
+
     }
 
-    .status.invalid {
-      display: block;
-      background: #fdeaea;
-      border: 1px solid #e2a0a0;
+
+    #reader__dashboard_section_csr {
+
+      display: none !important;
+
     }
 
-    .status.error {
-      display: block;
-      background: #fdeaea;
-      border: 1px solid #e2a0a0;
-    }
 
-    .icon {
-      font-size: 42px;
-      margin-bottom: 8px;
-    }
+    #reader button {
 
-    .title {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-
-    .details {
-      font-size: 15px;
-      line-height: 1.7;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 18px;
-      padding: 14px;
       border: none;
-      border-radius: 10px;
-      background: #111;
-      color: white;
-      font-size: 16px;
+
+      border-radius: 8px;
+
+      background: #00a6a6;
+
+      color: #ffffff;
+
+      padding:
+        9px 15px;
+
       font-weight: 600;
+
       cursor: pointer;
+
     }
 
-    button:active {
-      transform: scale(0.98);
+
+    #reader select {
+
+      max-width: 100%;
+
+      padding: 8px;
+
+      border-radius: 8px;
+
+      border:
+        1px solid #cccccc;
+
     }
 
-    .camera-error {
-      margin-top: 20px;
-      padding: 18px;
-      background: #fdeaea;
-      border: 1px solid #e2a0a0;
-      border-radius: 12px;
-      text-align: center;
-      line-height: 1.6;
+
+    /* ====================================
+       STATUS
+       ==================================== */
+
+    .status-box {
+
       display: none;
+
+      margin-top: 17px;
+
+      padding: 17px;
+
+      border-radius: 12px;
+
+      text-align: center;
+
+    }
+
+
+    .status-icon {
+
+      font-size: 32px;
+
+      margin-bottom: 7px;
+
+    }
+
+
+    .status-title {
+
+      font-size: 19px;
+
+      font-weight: 700;
+
+      margin-bottom: 6px;
+
+    }
+
+
+    .status-message {
+
+      font-size: 13px;
+
+      line-height: 1.5;
+
+    }
+
+
+    /* SUCCESS */
+
+    .status-success {
+
+      display: block;
+
+      background: #eaf9f5;
+
+      border:
+        1px solid #c8eee4;
+
+      color: #08745d;
+
+    }
+
+
+    /* DUPLICATE */
+
+    .status-duplicate {
+
+      display: block;
+
+      background: #fff8e8;
+
+      border:
+        1px solid #f0dfad;
+
+      color: #765900;
+
+    }
+
+
+    /* INVALID */
+
+    .status-invalid {
+
+      display: block;
+
+      background: #fff1f1;
+
+      border:
+        1px solid #ffd2d2;
+
+      color: #b42318;
+
+    }
+
+
+    /* ERROR */
+
+    .status-error {
+
+      display: block;
+
+      background: #fff1f1;
+
+      border:
+        1px solid #ffd2d2;
+
+      color: #b42318;
+
+    }
+
+
+    /* ====================================
+       SCAN NEXT
+       ==================================== */
+
+    #scanNextButton {
+
+      display: none;
+
+      width: 100%;
+
+      height: 48px;
+
+      margin-top: 13px;
+
+      border: none;
+
+      border-radius: 9px;
+
+      background: #00a6a6;
+
+      color: #ffffff;
+
+      font-size: 15px;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+    }
+
+
+    #scanNextButton:hover {
+
+      opacity: 0.92;
+
+    }
+
+
+    /* ====================================
+       FOOTER
+       ==================================== */
+
+    .footer {
+
+      text-align: center;
+
+      margin-top: 18px;
+
+      color: #888888;
+
+      font-size: 11px;
+
+      line-height: 1.5;
+
+    }
+
+
+    /* ====================================
+       LOADING
+       ==================================== */
+
+    .loading {
+
+      text-align: center;
+
+      color: #777777;
+
+      font-size: 13px;
+
+      padding: 12px;
+
+    }
+
+
+    @media (max-width: 420px) {
+
+      body {
+        padding: 13px;
+      }
+
+      .brand-name {
+        font-size: 25px;
+      }
+
+      .scanner-card {
+        padding: 14px;
+      }
+
     }
 
   </style>
@@ -138,14 +511,64 @@
 
 <body>
 
-  <div class="container">
 
-    <div class="brand">
-      Vaghela & Company
+<div class="container">
+
+
+  <!-- ==================================
+       BRAND
+       ================================== -->
+
+  <div class="brand">
+
+    <div class="brand-name">
+      Vaghela <span>&amp;</span> Company
     </div>
 
-    <div class="subtitle">
-      Attendance Scanner
+    <div class="tagline">
+      PLAN • INVEST • GROW
+    </div>
+
+  </div>
+
+
+  <!-- ==================================
+       MEETING
+       ================================== -->
+
+  <div class="meeting-card">
+
+    <div class="meeting-label">
+      Attendance
+    </div>
+
+
+    <div id="meetingTopic">
+      Loading meeting...
+    </div>
+
+
+    <div id="meetingDate">
+      Please wait...
+    </div>
+
+  </div>
+
+
+  <!-- ==================================
+       SCANNER
+       ================================== -->
+
+  <div class="scanner-card">
+
+
+    <div class="scanner-title">
+      Scan Client QR
+    </div>
+
+
+    <div class="scanner-subtitle">
+      Point the camera at the client's QR code
     </div>
 
 
@@ -153,315 +576,590 @@
 
 
     <div
-      id="cameraError"
-      class="camera-error"
-    >
-      Unable to access camera.<br>
-      Please allow camera permission and reload this page.
-    </div>
+      id="statusBox"
+      class="status-box">
 
-
-    <div
-      id="status"
-      class="status"
-    >
 
       <div
         id="statusIcon"
-        class="icon"
-      ></div>
+        class="status-icon">
+      </div>
+
 
       <div
         id="statusTitle"
-        class="title"
-      ></div>
+        class="status-title">
+      </div>
+
 
       <div
-        id="statusDetails"
-        class="details"
-      ></div>
-
-      <button onclick="scanNext()">
-        Scan Next Client
-      </button>
+        id="statusMessage"
+        class="status-message">
+      </div>
 
     </div>
+
+
+    <button
+      id="scanNextButton"
+      onclick="scanNext()">
+
+      Scan Next Client
+
+    </button>
+
 
   </div>
 
 
+  <div class="footer">
+
+    Vaghela &amp; Company Financial Services
+
+    <br>
+
+    Client Meeting Attendance
+
+  </div>
+
+
+</div>
+
+
+
 <script>
+
+
+/* ==========================================
+   APPS SCRIPT BACKEND
+   ========================================== */
 
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwpbh3s-hyOGkppRp1HnfCSw-rIcSraL4OXoOngDeLMSm52k2Jp0m8nmRoLM-9K3ZWAiA/exec";
 
 
+/* ==========================================
+   SCANNER VARIABLES
+   ========================================== */
+
 let html5QrCode = null;
-let scanning = false;
-let processing = false;
+
+let isProcessing = false;
 
 
-// ==========================================
-// START SCANNER
-// ==========================================
+/* ==========================================
+   LOAD MEETING
+   ========================================== */
 
-function startScanner() {
+function loadMeeting() {
 
-  document.getElementById("status").style.display = "none";
+  const callbackName =
+    "vaghelaMeetingResult_" +
+    Date.now();
 
-  document.getElementById("cameraError").style.display = "none";
 
-  processing = false;
+  window[callbackName] =
+    function(response) {
 
-  html5QrCode = new Html5Qrcode("reader");
+      try {
 
-  html5QrCode.start(
+        if (
+          response &&
+          response.success &&
+          response.meeting
+        ) {
 
-    { facingMode: "environment" },
+          document.getElementById(
+            "meetingTopic"
+          ).textContent =
+            response.meeting.topic ||
+            "Client Meeting";
 
-    {
-      fps: 10,
-      qrbox: {
-        width: 250,
-        height: 250
+
+          document.getElementById(
+            "meetingDate"
+          ).textContent =
+            response.meeting.date
+              ? "Date: " +
+                response.meeting.date
+              : "";
+
+        } else {
+
+          document.getElementById(
+            "meetingTopic"
+          ).textContent =
+            "Meeting information unavailable";
+
+
+          document.getElementById(
+            "meetingDate"
+          ).textContent =
+            "";
+
+        }
+
+      } finally {
+
+        delete window[callbackName];
+
       }
-    },
 
-    onScanSuccess,
+    };
 
-    function(errorMessage) {
-      // Normal scanning errors are ignored.
-    }
 
-  ).then(function() {
+  const script =
+    document.createElement(
+      "script"
+    );
 
-    scanning = true;
 
-  }).catch(function(error) {
+  script.src =
+    APPS_SCRIPT_URL +
+    "?api=meeting" +
+    "&callback=" +
+    callbackName +
+    "&_=" +
+    Date.now();
 
-    console.error(error);
 
-    document.getElementById("cameraError").style.display = "block";
+  script.onerror =
+    function() {
 
-  });
+      document.getElementById(
+        "meetingTopic"
+      ).textContent =
+        "Unable to load meeting";
+
+
+      document.getElementById(
+        "meetingDate"
+      ).textContent =
+        "";
+
+      delete window[callbackName];
+
+    };
+
+
+  document.body.appendChild(
+    script
+  );
 
 }
 
 
-// ==========================================
-// QR SCANNED
-// ==========================================
+/* ==========================================
+   QR SCANNER SUCCESS
+   ========================================== */
 
-function onScanSuccess(decodedText) {
+function onScanSuccess(
+  decodedText,
+  decodedResult
+) {
 
-  if (processing) {
+  if (isProcessing) {
     return;
   }
 
-  processing = true;
+
+  isProcessing = true;
+
 
   stopScanner();
 
-  checkAttendance(decodedText);
-}
 
-
-// ==========================================
-// STOP CAMERA
-// ==========================================
-
-function stopScanner() {
-
-  if (!html5QrCode || !scanning) {
-    return;
-  }
-
-  html5QrCode.stop()
-    .then(function() {
-
-      scanning = false;
-
-    })
-    .catch(function(error) {
-
-      console.error(error);
-
-    });
+  verifyAttendance(
+    decodedText
+  );
 
 }
 
 
-// ==========================================
-// SEND TOKEN TO APPS SCRIPT
-// ==========================================
+/* ==========================================
+   VERIFY ATTENDANCE
+   ========================================== */
 
-function checkAttendance(qrToken) {
+function verifyAttendance(
+  qrToken
+) {
 
-  window.vaghelaAttendanceResult = function(result) {
-
-    showResult(result);
-
-    delete window.vaghelaAttendanceResult;
-
-  };
+  const callbackName =
+    "vaghelaAttendanceResult_" +
+    Date.now();
 
 
-  const script = document.createElement("script");
+  window[callbackName] =
+    function(response) {
+
+      try {
+
+        if (!response) {
+
+          showStatus(
+            "error",
+            "Something went wrong",
+            "No response was received from the attendance system."
+          );
+
+          return;
+        }
+
+
+        /* ==============================
+           SUCCESS
+           ============================== */
+
+        if (
+          response.success === true &&
+          response.type === "SUCCESS"
+        ) {
+
+          showStatus(
+            "success",
+            "Attendance Confirmed",
+            response.clientName +
+            "<br><br>" +
+            "Registration ID: " +
+            response.registrationId +
+            "<br>" +
+            "Check-in Time: " +
+            response.checkInTime
+          );
+
+          return;
+        }
+
+
+        /* ==============================
+           ALREADY CHECKED IN
+           ============================== */
+
+        if (
+          response.type === "DUPLICATE"
+        ) {
+
+          showStatus(
+            "duplicate",
+            "Already Checked In",
+            response.clientName +
+            "<br><br>" +
+            "Registration ID: " +
+            response.registrationId +
+            "<br><br>" +
+            "This client has already been marked present."
+          );
+
+          return;
+        }
+
+
+        /* ==============================
+           INVALID QR
+           ============================== */
+
+        if (
+          response.type === "INVALID"
+        ) {
+
+          showStatus(
+            "invalid",
+            "Invalid QR Code",
+            response.message ||
+            "This QR code is not valid for the meeting."
+          );
+
+          return;
+        }
+
+
+        /* ==============================
+           ERROR
+           ============================== */
+
+        showStatus(
+          "error",
+          "Unable to Verify",
+          response.message ||
+          "Please try scanning the QR code again."
+        );
+
+      } finally {
+
+        delete window[callbackName];
+
+      }
+
+    };
+
+
+  const script =
+    document.createElement(
+      "script"
+    );
+
 
   script.src =
     APPS_SCRIPT_URL +
     "?api=checkin" +
     "&token=" +
-    encodeURIComponent(qrToken) +
+    encodeURIComponent(
+      qrToken
+    ) +
+    "&callback=" +
+    callbackName +
     "&_=" +
     Date.now();
 
 
-  script.onerror = function() {
+  script.onerror =
+    function() {
 
-    showResult({
-      success: false,
-      type: "ERROR",
-      message: "Unable to contact attendance server."
-    });
+      showStatus(
+        "error",
+        "Connection Error",
+        "Unable to connect to the attendance system. Please try again."
+      );
+
+
+      delete window[callbackName];
+
+    };
+
+
+  document.body.appendChild(
+    script
+  );
+
+}
+
+
+/* ==========================================
+   SHOW STATUS
+   ========================================== */
+
+function showStatus(
+  type,
+  title,
+  message
+) {
+
+  const box =
+    document.getElementById(
+      "statusBox"
+    );
+
+
+  const icon =
+    document.getElementById(
+      "statusIcon"
+    );
+
+
+  const titleElement =
+    document.getElementById(
+      "statusTitle"
+    );
+
+
+  const messageElement =
+    document.getElementById(
+      "statusMessage"
+    );
+
+
+  box.className =
+    "status-box status-" +
+    type;
+
+
+  if (type === "success") {
+
+    icon.textContent = "✓";
+
+  } else if (
+    type === "duplicate"
+  ) {
+
+    icon.textContent = "✓";
+
+  } else {
+
+    icon.textContent = "!";
+
+  }
+
+
+  titleElement.textContent =
+    title;
+
+
+  messageElement.innerHTML =
+    message;
+
+
+  box.style.display =
+    "block";
+
+
+  document.getElementById(
+    "scanNextButton"
+  ).style.display =
+    "block";
+
+}
+
+
+/* ==========================================
+   START SCANNER
+   ========================================== */
+
+function startScanner() {
+
+  isProcessing = false;
+
+
+  document.getElementById(
+    "statusBox"
+  ).style.display =
+    "none";
+
+
+  document.getElementById(
+    "scanNextButton"
+  ).style.display =
+    "none";
+
+
+  html5QrCode =
+    new Html5Qrcode(
+      "reader"
+    );
+
+
+  const config = {
+
+    fps: 10,
+
+    qrbox: {
+      width: 250,
+      height: 250
+    },
+
+    aspectRatio: 1.0
 
   };
 
 
-  document.body.appendChild(script);
+  html5QrCode
+    .start(
+
+      {
+        facingMode: "environment"
+      },
+
+      config,
+
+      onScanSuccess,
+
+      function(errorMessage) {
+        // Ignore continuous scan errors.
+      }
+
+    )
+
+    .catch(
+      function(error) {
+
+        showStatus(
+          "error",
+          "Camera Could Not Start",
+          "Please allow camera permission and reload this page."
+        );
+
+        console.error(error);
+
+      }
+    );
 
 }
 
 
-// ==========================================
-// SHOW RESULT
-// ==========================================
+/* ==========================================
+   STOP SCANNER
+   ========================================== */
 
-function showResult(result) {
+function stopScanner() {
 
-  const status = document.getElementById("status");
-  const icon = document.getElementById("statusIcon");
-  const title = document.getElementById("statusTitle");
-  const details = document.getElementById("statusDetails");
+  if (
+    html5QrCode
+  ) {
 
-  status.className = "status";
+    html5QrCode
+      .stop()
 
-  if (result.type === "SUCCESS") {
+      .then(
+        function() {
 
-    status.classList.add("success");
+          html5QrCode.clear();
 
-    icon.textContent = "✓";
+        }
+      )
 
-    title.textContent = "Attendance Confirmed";
+      .catch(
+        function(error) {
 
-    details.innerHTML =
-      "<strong>" +
-      escapeHtml(result.clientName) +
-      "</strong><br>" +
+          console.log(
+            "Scanner stop:",
+            error
+          );
 
-      "Registration ID: " +
-      escapeHtml(result.registrationId) +
-      "<br>" +
-
-      "Meeting: " +
-      escapeHtml(result.meetingId) +
-      "<br>" +
-
-      "Check-in: " +
-      escapeHtml(result.checkInTime);
+        }
+      );
 
   }
-
-
-  else if (result.type === "DUPLICATE") {
-
-    status.classList.add("duplicate");
-
-    icon.textContent = "⚠";
-
-    title.textContent = "Already Checked In";
-
-    details.innerHTML =
-      "<strong>" +
-      escapeHtml(result.clientName) +
-      "</strong><br>" +
-
-      "Registration ID: " +
-      escapeHtml(result.registrationId) +
-      "<br><br>" +
-
-      "This client has already been marked present.";
-
-  }
-
-
-  else if (result.type === "INVALID") {
-
-    status.classList.add("invalid");
-
-    icon.textContent = "✕";
-
-    title.textContent = "Invalid QR Code";
-
-    details.textContent =
-      result.message || "This QR code is not valid.";
-
-  }
-
-
-  else {
-
-    status.classList.add("error");
-
-    icon.textContent = "⚠";
-
-    title.textContent = "Something Went Wrong";
-
-    details.textContent =
-      result.message || "Please try again.";
-
-  }
-
-
-  status.style.display = "block";
 
 }
 
 
-// ==========================================
-// SCAN NEXT
-// ==========================================
+/* ==========================================
+   SCAN NEXT CLIENT
+   ========================================== */
 
 function scanNext() {
 
-  document.getElementById("status").style.display = "none";
+  document.getElementById(
+    "statusBox"
+  ).style.display =
+    "none";
 
-  processing = false;
+
+  document.getElementById(
+    "scanNextButton"
+  ).style.display =
+    "none";
+
 
   startScanner();
 
 }
 
 
-// ==========================================
-// HTML ESCAPE
-// ==========================================
+/* ==========================================
+   PAGE LOAD
+   ========================================== */
 
-function escapeHtml(value) {
+window.addEventListener(
+  "load",
+  function() {
 
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    loadMeeting();
 
-}
+    startScanner();
 
+  }
+);
 
-// START
-
-startScanner();
 
 </script>
 
