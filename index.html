@@ -13,9 +13,7 @@
     name="theme-color"
     content="#00a6a6">
 
-  <title>
-    Vaghela & Company - Attendance
-  </title>
+  <title>Vaghela & Company - Attendance</title>
 
 
   <!-- QR SCANNER LIBRARY -->
@@ -175,6 +173,24 @@
       font-size: 13px;
 
       color: #666666;
+
+    }
+
+
+    /* ====================================
+       MEETING LOADING
+       ==================================== */
+
+    .meeting-loading {
+
+      color: #888888;
+
+    }
+
+
+    .meeting-error {
+
+      color: #b42318;
 
     }
 
@@ -479,6 +495,21 @@
 
 
     /* ====================================
+       CONNECTION RETRY TEXT
+       ==================================== */
+
+    .retry-text {
+
+      margin-top: 7px;
+
+      font-size: 12px;
+
+      opacity: 0.8;
+
+    }
+
+
+    /* ====================================
        SCAN NEXT
        ==================================== */
 
@@ -512,6 +543,37 @@
     #scanNextButton:hover {
 
       opacity: 0.92;
+
+    }
+
+
+    /* ====================================
+       RETRY BUTTON
+       ==================================== */
+
+    #retryButton {
+
+      display: none;
+
+      width: 100%;
+
+      height: 48px;
+
+      margin-top: 13px;
+
+      border: none;
+
+      border-radius: 9px;
+
+      background: #00a6a6;
+
+      color: #ffffff;
+
+      font-size: 15px;
+
+      font-weight: 700;
+
+      cursor: pointer;
 
     }
 
@@ -594,13 +656,21 @@
     </div>
 
 
-    <div id="meetingTopic">
+    <div
+      id="meetingTopic"
+      class="meeting-loading">
+
       Loading meeting...
+
     </div>
 
 
-    <div id="meetingDate">
-      Please wait...
+    <div
+      id="meetingDate"
+      class="meeting-loading">
+
+      Connecting...
+
     </div>
 
   </div>
@@ -625,6 +695,8 @@
 
     <div id="reader"></div>
 
+
+    <!-- STATUS -->
 
     <div
       id="statusBox"
@@ -651,11 +723,24 @@
     </div>
 
 
+    <!-- SCAN NEXT -->
+
     <button
       id="scanNextButton"
       onclick="scanNext()">
 
       Scan Next Client
+
+    </button>
+
+
+    <!-- RETRY -->
+
+    <button
+      id="retryButton"
+      onclick="retryCurrentAction()">
+
+      Try Again
 
     </button>
 
@@ -681,204 +766,539 @@
 <script>
 
 
-/* ==========================================
-   APPS SCRIPT BACKEND
-   ========================================== */
+/* =========================================================
+   CONFIGURATION
+   ========================================================= */
 
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwpbh3s-hyOGkppRp1HnfCSw-rIcSraL4OXoOngDeLMSm52k2Jp0m8nmRoLM-9K3ZWAiA/exec";
 
 
-/* ==========================================
+/*
+ * Maximum number of automatic attempts.
+ */
+
+const MAX_RETRIES = 3;
+
+
+/*
+ * Maximum time allowed for one API request.
+ *
+ * 8 seconds gives Google Apps Script enough
+ * time while preventing an endless wait.
+ */
+
+const REQUEST_TIMEOUT = 8000;
+
+
+/*
+ * Delay between automatic attempts.
+ */
+
+const RETRY_DELAY = 700;
+
+
+/* =========================================================
    SCANNER VARIABLES
-   ========================================== */
+   ========================================================= */
 
 let html5QrCode = null;
 
 let isProcessing = false;
 
+let currentQrToken = null;
 
-/* ==========================================
-   LOAD CURRENT MEETING
-   ========================================== */
+let currentAction = null;
 
-function loadMeeting() {
-
-  const callbackName =
-    "vaghelaMeetingResult_" +
-    Date.now();
+let meetingLoaded = false;
 
 
-  window[callbackName] =
-    function(response) {
+/* =========================================================
+   GENERIC DELAY
+   ========================================================= */
 
-      try {
+function delay(ms) {
 
-        console.log(
-          "Meeting API response:",
-          response
-        );
+  return new Promise(
+    function(resolve) {
 
+      setTimeout(
+        resolve,
+        ms
+      );
 
-        /*
-         * Actual Apps Script response:
-         *
-         * {
-         *   success: true,
-         *   meetingId: "M004",
-         *   topic: "Financial Freedom",
-         *   date: "01 October 2026"
-         * }
-         */
-
-        if (
-          response &&
-          response.success === true
-        ) {
-
-          document.getElementById(
-            "meetingTopic"
-          ).textContent =
-            response.topic ||
-            "Client Meeting";
-
-
-          document.getElementById(
-            "meetingDate"
-          ).textContent =
-            response.date
-              ? "Date: " +
-                response.date
-              : "";
-
-        } else {
-
-          document.getElementById(
-            "meetingTopic"
-          ).textContent =
-            "Meeting information unavailable";
-
-
-          document.getElementById(
-            "meetingDate"
-          ).textContent =
-            "";
-
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Meeting display error:",
-          error
-        );
-
-        document.getElementById(
-          "meetingTopic"
-        ).textContent =
-          "Meeting information unavailable";
-
-      } finally {
-
-        delete window[callbackName];
-
-      }
-
-    };
-
-
-  const script =
-    document.createElement(
-      "script"
-    );
-
-
-  script.src =
-    APPS_SCRIPT_URL +
-    "?api=meeting" +
-    "&callback=" +
-    callbackName +
-    "&_=" +
-    Date.now();
-
-
-  script.onerror =
-    function() {
-
-      document.getElementById(
-        "meetingTopic"
-      ).textContent =
-        "Unable to load meeting";
-
-
-      document.getElementById(
-        "meetingDate"
-      ).textContent =
-        "";
-
-      delete window[callbackName];
-
-    };
-
-
-  document.body.appendChild(
-    script
+    }
   );
 
 }
 
 
-/* ==========================================
-   QR SCANNER SUCCESS
-   ========================================== */
+/* =========================================================
+   JSONP REQUEST
+   ========================================================= */
+
+/*
+ * This function creates a temporary JSONP callback.
+ *
+ * It also has a timeout.
+ *
+ * If Google Apps Script doesn't respond,
+ * the Promise rejects and the retry system
+ * can make another attempt.
+ */
+
+function jsonpRequest(
+  url
+) {
+
+  return new Promise(
+    function(resolve, reject) {
+
+      const callbackName =
+        "vaghelaCallback_" +
+        Date.now() +
+        "_" +
+        Math.floor(
+          Math.random() * 100000
+        );
+
+
+      let finished = false;
+
+      const script =
+        document.createElement(
+          "script"
+        );
+
+
+      const timeout =
+        setTimeout(
+          function() {
+
+            if (finished) {
+              return;
+            }
+
+
+            finished = true;
+
+
+            cleanup();
+
+
+            reject(
+              new Error(
+                "Request timed out"
+              )
+            );
+
+          },
+          REQUEST_TIMEOUT
+        );
+
+
+      function cleanup() {
+
+        clearTimeout(
+          timeout
+        );
+
+
+        try {
+
+          delete window[
+            callbackName
+          ];
+
+        } catch (error) {
+
+          window[
+            callbackName
+          ] = undefined;
+
+        }
+
+
+        if (
+          script.parentNode
+        ) {
+
+          script.parentNode.removeChild(
+            script
+          );
+
+        }
+
+      }
+
+
+      window[
+        callbackName
+      ] =
+        function(response) {
+
+          if (finished) {
+            return;
+          }
+
+
+          finished = true;
+
+
+          cleanup();
+
+
+          resolve(
+            response
+          );
+
+        };
+
+
+      script.onerror =
+        function() {
+
+          if (finished) {
+            return;
+          }
+
+
+          finished = true;
+
+
+          cleanup();
+
+
+          reject(
+            new Error(
+              "Network error"
+            )
+          );
+
+        };
+
+
+      script.src =
+        url +
+        (
+          url.indexOf("?") >= 0
+            ? "&"
+            : "?"
+        ) +
+        "callback=" +
+        encodeURIComponent(
+          callbackName
+        ) +
+        "&_=" +
+        Date.now();
+
+
+      document.body.appendChild(
+        script
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   JSONP WITH RETRY
+   ========================================================= */
+
+async function jsonpWithRetry(
+  baseUrl,
+  attempts,
+  progressCallback
+) {
+
+  let lastError = null;
+
+
+  for (
+    let attempt = 1;
+    attempt <= attempts;
+    attempt++
+  ) {
+
+    try {
+
+      if (
+        progressCallback
+      ) {
+
+        progressCallback(
+          attempt
+        );
+
+      }
+
+
+      const response =
+        await jsonpRequest(
+          baseUrl
+        );
+
+
+      return response;
+
+    } catch (error) {
+
+      lastError =
+        error;
+
+
+      console.warn(
+        "API attempt " +
+        attempt +
+        " failed:",
+        error
+      );
+
+
+      if (
+        attempt < attempts
+      ) {
+
+        await delay(
+          RETRY_DELAY
+        );
+
+      }
+
+    }
+
+  }
+
+
+  throw lastError ||
+    new Error(
+      "Request failed"
+    );
+
+}
+
+
+/* =========================================================
+   LOAD CURRENT MEETING
+   ========================================================= */
+
+async function loadMeeting() {
+
+  const topicElement =
+    document.getElementById(
+      "meetingTopic"
+    );
+
+
+  const dateElement =
+    document.getElementById(
+      "meetingDate"
+    );
+
+
+  topicElement.className =
+    "meeting-loading";
+
+
+  topicElement.textContent =
+    "Loading meeting...";
+
+
+  dateElement.className =
+    "meeting-loading";
+
+
+  dateElement.textContent =
+    "Connecting...";
+
+
+  const url =
+    APPS_SCRIPT_URL +
+    "?api=meeting";
+
+
+  try {
+
+    const response =
+      await jsonpWithRetry(
+        url,
+        MAX_RETRIES,
+        function(attempt) {
+
+          if (
+            attempt > 1
+          ) {
+
+            topicElement.textContent =
+              "Connecting to meeting...";
+
+
+            dateElement.textContent =
+              "Retry " +
+              attempt +
+              " of " +
+              MAX_RETRIES;
+
+          }
+
+        }
+      );
+
+
+    console.log(
+      "Meeting response:",
+      response
+    );
+
+
+    if (
+      response &&
+      response.success === true
+    ) {
+
+      meetingLoaded =
+        true;
+
+
+      topicElement.className =
+        "";
+
+
+      topicElement.textContent =
+        response.topic ||
+        "Client Meeting";
+
+
+      dateElement.className =
+        "";
+
+
+      dateElement.textContent =
+        response.date
+          ? "Date: " +
+            response.date
+          : "";
+
+      return;
+
+    }
+
+
+    throw new Error(
+      "Invalid meeting response"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Meeting loading failed:",
+      error
+    );
+
+
+    meetingLoaded =
+      false;
+
+
+    topicElement.className =
+      "meeting-error";
+
+
+    topicElement.textContent =
+      "Meeting information unavailable";
+
+
+    dateElement.className =
+      "meeting-error";
+
+
+    dateElement.textContent =
+      "Please try again";
+
+  }
+
+}
+
+
+/* =========================================================
+   QR SCAN SUCCESS
+   ========================================================= */
 
 function onScanSuccess(
   decodedText,
   decodedResult
 ) {
 
-  if (isProcessing) {
+  /*
+   * Ignore another QR while the current
+   * attendance request is running.
+   */
+
+  if (
+    isProcessing
+  ) {
 
     return;
 
   }
 
 
-  isProcessing = true;
-
-
   /*
-   * IMPORTANT:
-   *
-   * Show the processing message FIRST.
-   *
-   * This happens immediately when the QR
-   * is detected, before the Apps Script
-   * request is sent.
+   * Ignore empty scans.
    */
 
-  showProcessing();
+  if (
+    !decodedText ||
+    !String(decodedText).trim()
+  ) {
+
+    return;
+
+  }
+
+
+  isProcessing =
+    true;
+
+
+  currentQrToken =
+    String(decodedText).trim();
+
+
+  currentAction =
+    "attendance";
 
 
   /*
-   * Stop camera scanning while the
-   * attendance request is being processed.
+   * IMMEDIATELY show processing.
+   */
+
+  showProcessing(
+    1
+  );
+
+
+  /*
+   * Stop scanning while processing.
    */
 
   stopScanner();
 
 
   /*
-   * Give the browser a tiny moment to
-   * render the processing UI before
-   * starting the network request.
+   * Small delay allows the browser
+   * to render the spinner before
+   * the network request begins.
    */
 
   setTimeout(
     function() {
 
       verifyAttendance(
-        decodedText
+        currentQrToken
       );
 
     },
@@ -888,11 +1308,355 @@ function onScanSuccess(
 }
 
 
-/* ==========================================
+/* =========================================================
    SHOW PROCESSING
-   ========================================== */
+   ========================================================= */
 
-function showProcessing() {
+function showProcessing(
+  attempt
+) {
+
+  const box =
+    document.getElementById(
+      "statusBox"
+    );
+
+
+  const icon =
+    document.getElementById(
+      "statusIcon"
+    );
+
+
+  const title =
+    document.getElementById(
+      "statusTitle"
+    );
+
+
+  const message =
+    document.getElementById(
+      "statusMessage"
+    );
+
+
+  const retryButton =
+    document.getElementById(
+      "retryButton"
+    );
+
+
+  const scanNextButton =
+    document.getElementById(
+      "scanNextButton"
+    );
+
+
+  box.className =
+    "status-box status-processing";
+
+
+  icon.innerHTML =
+    '<div class="spinner"></div>';
+
+
+  title.textContent =
+    "Processing Attendance";
+
+
+  if (
+    attempt &&
+    attempt > 1
+  ) {
+
+    message.innerHTML =
+      "QR code detected. Retrying connection...<div class=\"retry-text\">" +
+      "Attempt " +
+      attempt +
+      " of " +
+      MAX_RETRIES +
+      "</div>";
+
+  } else {
+
+    message.innerHTML =
+      "QR code detected. Verifying client attendance...";
+
+  }
+
+
+  box.style.display =
+    "block";
+
+
+  retryButton.style.display =
+    "none";
+
+
+  scanNextButton.style.display =
+    "none";
+
+}
+
+
+/* =========================================================
+   VERIFY ATTENDANCE
+   ========================================================= */
+
+async function verifyAttendance(
+  qrToken
+) {
+
+  const url =
+    APPS_SCRIPT_URL +
+    "?api=checkin" +
+    "&token=" +
+    encodeURIComponent(
+      qrToken
+    );
+
+
+  try {
+
+    const response =
+      await jsonpWithRetry(
+        url,
+        MAX_RETRIES,
+        function(attempt) {
+
+          showProcessing(
+            attempt
+          );
+
+        }
+      );
+
+
+    console.log(
+      "Attendance response:",
+      response
+    );
+
+
+    /*
+     * DUPLICATE
+     */
+
+    if (
+      response &&
+      response.status === "DUPLICATE"
+    ) {
+
+      showStatus(
+        "duplicate",
+        "Already Checked In",
+        (response.name || "Client") +
+        "<br><br>" +
+        "Registration ID: " +
+        (response.registrationId || "-") +
+        "<br><br>" +
+        "This client has already been marked present."
+      );
+
+
+      finishProcessing();
+
+      return;
+
+    }
+
+
+    /*
+     * INVALID
+     */
+
+    if (
+      response &&
+      response.status === "INVALID"
+    ) {
+
+      showStatus(
+        "invalid",
+        "Invalid QR Code",
+        response.message ||
+        "This QR code is not valid."
+      );
+
+
+      finishProcessing();
+
+      return;
+
+    }
+
+
+    /*
+     * SUCCESS
+     */
+
+    if (
+      response &&
+      response.success === true
+    ) {
+
+      showStatus(
+        "success",
+        "Attendance Confirmed",
+        (response.name || "Client") +
+        "<br><br>" +
+        "Registration ID: " +
+        (response.registrationId || "-") +
+        "<br>" +
+        "Check-in Time: " +
+        formatCheckInTime(
+          response.checkInTime
+        )
+      );
+
+
+      finishProcessing();
+
+      return;
+
+    }
+
+
+    /*
+     * UNKNOWN RESPONSE
+     */
+
+    showStatus(
+      "error",
+      "Unable to Verify",
+      response &&
+      response.message
+        ? response.message
+        : "The attendance system returned an unexpected response."
+    );
+
+
+    finishProcessing();
+
+
+  } catch (error) {
+
+    console.error(
+      "Attendance request failed:",
+      error
+    );
+
+
+    /*
+     * All automatic retries failed.
+     *
+     * Now show a useful error and
+     * allow the employee to retry.
+     */
+
+    showConnectionError();
+
+    finishProcessing();
+
+  }
+
+}
+
+
+/* =========================================================
+   CONNECTION ERROR
+   ========================================================= */
+
+function showConnectionError() {
+
+  const box =
+    document.getElementById(
+      "statusBox"
+    );
+
+
+  const icon =
+    document.getElementById(
+      "statusIcon"
+    );
+
+
+  const title =
+    document.getElementById(
+      "statusTitle"
+    );
+
+
+  const message =
+    document.getElementById(
+      "statusMessage"
+    );
+
+
+  const retryButton =
+    document.getElementById(
+      "retryButton"
+    );
+
+
+  const scanNextButton =
+    document.getElementById(
+      "scanNextButton"
+    );
+
+
+  box.className =
+    "status-box status-error";
+
+
+  icon.textContent =
+    "!";
+
+
+  title.textContent =
+    "Connection Problem";
+
+
+  message.innerHTML =
+    "The attendance server did not respond after multiple attempts." +
+    "<br><br>" +
+    "Your attendance has NOT been confirmed. Please try again.";
+
+
+  box.style.display =
+    "block";
+
+
+  retryButton.style.display =
+    "block";
+
+
+  scanNextButton.style.display =
+    "none";
+
+}
+
+
+/* =========================================================
+   FINALIZE PROCESSING
+   ========================================================= */
+
+function finishProcessing() {
+
+  isProcessing =
+    false;
+
+}
+
+
+/* =========================================================
+   SHOW STATUS
+   ========================================================= */
+
+function showStatus(
+  type,
+  title,
+  message
+) {
 
   const box =
     document.getElementById(
@@ -918,241 +1682,64 @@ function showProcessing() {
     );
 
 
+  const scanNextButton =
+    document.getElementById(
+      "scanNextButton"
+    );
+
+
+  const retryButton =
+    document.getElementById(
+      "retryButton"
+    );
+
+
   box.className =
-    "status-box status-processing";
+    "status-box status-" +
+    type;
 
 
-  /*
-   * Spinner is inserted here.
-   */
+  if (
+    type === "success" ||
+    type === "duplicate"
+  ) {
 
-  icon.innerHTML =
-    '<div class="spinner"></div>';
+    icon.textContent =
+      "✓";
+
+  } else {
+
+    icon.textContent =
+      "!";
+
+  }
 
 
   titleElement.textContent =
-    "Processing Attendance";
+    title;
 
 
-  messageElement.textContent =
-    "QR code detected. Verifying client attendance...";
+  messageElement.innerHTML =
+    message;
 
 
   box.style.display =
     "block";
 
 
-  /*
-   * Keep Scan Next hidden while processing.
-   */
-
-  document.getElementById(
-    "scanNextButton"
-  ).style.display =
+  retryButton.style.display =
     "none";
 
-}
 
-
-/* ==========================================
-   VERIFY ATTENDANCE
-   ========================================== */
-
-function verifyAttendance(
-  qrToken
-) {
-
-  const callbackName =
-    "vaghelaAttendanceResult_" +
-    Date.now();
-
-
-  window[callbackName] =
-    function(response) {
-
-      try {
-
-        console.log(
-          "Attendance API response:",
-          response
-        );
-
-
-        /* ==================================
-           NO RESPONSE
-           ================================== */
-
-        if (!response) {
-
-          showStatus(
-            "error",
-            "Something Went Wrong",
-            "No response was received from the attendance system."
-          );
-
-          return;
-
-        }
-
-
-        /*
-         * ACTUAL DUPLICATE RESPONSE:
-         *
-         * {
-         *   success: true,
-         *   status: "DUPLICATE",
-         *   name: "...",
-         *   registrationId: "...",
-         *   ...
-         * }
-         */
-
-        if (
-          response.status === "DUPLICATE"
-        ) {
-
-          showStatus(
-            "duplicate",
-            "Already Checked In",
-            (response.name || "Client") +
-            "<br><br>" +
-            "Registration ID: " +
-            (response.registrationId || "-") +
-            "<br><br>" +
-            "This client has already been marked present."
-          );
-
-          return;
-
-        }
-
-
-        /* ==================================
-           INVALID QR
-           ================================== */
-
-        if (
-          response.status === "INVALID"
-        ) {
-
-          showStatus(
-            "invalid",
-            "Invalid QR Code",
-            response.message ||
-            "This QR code is not valid."
-          );
-
-          return;
-
-        }
-
-
-        /* ==================================
-           SUCCESSFUL CHECK-IN
-           ================================== */
-
-        if (
-          response.success === true
-        ) {
-
-          showStatus(
-            "success",
-            "Attendance Confirmed",
-            (response.name || "Client") +
-            "<br><br>" +
-            "Registration ID: " +
-            (response.registrationId || "-") +
-            "<br>" +
-            "Check-in Time: " +
-            formatCheckInTime(
-              response.checkInTime
-            )
-          );
-
-          return;
-
-        }
-
-
-        /* ==================================
-           BACKEND ERROR
-           ================================== */
-
-        showStatus(
-          "error",
-          "Unable to Verify",
-          response.message ||
-          "Please try scanning the QR code again."
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "Attendance response error:",
-          error
-        );
-
-
-        showStatus(
-          "error",
-          "Unable to Verify",
-          "Please try scanning the QR code again."
-        );
-
-      } finally {
-
-        delete window[callbackName];
-
-      }
-
-    };
-
-
-  const script =
-    document.createElement(
-      "script"
-    );
-
-
-  script.src =
-    APPS_SCRIPT_URL +
-    "?api=checkin" +
-    "&token=" +
-    encodeURIComponent(
-      qrToken
-    ) +
-    "&callback=" +
-    callbackName +
-    "&_=" +
-    Date.now();
-
-
-  script.onerror =
-    function() {
-
-      showStatus(
-        "error",
-        "Connection Error",
-        "Unable to connect to the attendance system. Please try again."
-      );
-
-
-      delete window[callbackName];
-
-    };
-
-
-  document.body.appendChild(
-    script
-  );
+  scanNextButton.style.display =
+    "block";
 
 }
 
 
-/* ==========================================
+/* =========================================================
    FORMAT CHECK-IN TIME
-   ========================================== */
+   ========================================================= */
 
 function formatCheckInTime(
   value
@@ -1203,99 +1790,23 @@ function formatCheckInTime(
 }
 
 
-/* ==========================================
-   SHOW FINAL STATUS
-   ========================================== */
-
-function showStatus(
-  type,
-  title,
-  message
-) {
-
-  const box =
-    document.getElementById(
-      "statusBox"
-    );
-
-
-  const icon =
-    document.getElementById(
-      "statusIcon"
-    );
-
-
-  const titleElement =
-    document.getElementById(
-      "statusTitle"
-    );
-
-
-  const messageElement =
-    document.getElementById(
-      "statusMessage"
-    );
-
-
-  box.className =
-    "status-box status-" +
-    type;
-
-
-  /*
-   * Restore the normal icon after
-   * processing spinner.
-   */
-
-  if (
-    type === "success" ||
-    type === "duplicate"
-  ) {
-
-    icon.textContent =
-      "✓";
-
-  } else {
-
-    icon.textContent =
-      "!";
-
-  }
-
-
-  titleElement.textContent =
-    title;
-
-
-  messageElement.innerHTML =
-    message;
-
-
-  box.style.display =
-    "block";
-
-
-  /*
-   * Scan Next only appears after
-   * processing is complete.
-   */
-
-  document.getElementById(
-    "scanNextButton"
-  ).style.display =
-    "block";
-
-}
-
-
-/* ==========================================
+/* =========================================================
    START SCANNER
-   ========================================== */
+   ========================================================= */
 
 function startScanner() {
 
-  isProcessing = false;
+  /*
+   * Make sure the scanner is unlocked.
+   */
 
+  isProcessing =
+    false;
+
+
+  /*
+   * Hide old status.
+   */
 
   document.getElementById(
     "statusBox"
@@ -1309,8 +1820,14 @@ function startScanner() {
     "none";
 
 
+  document.getElementById(
+    "retryButton"
+  ).style.display =
+    "none";
+
+
   /*
-   * Create a fresh scanner instance.
+   * Create new scanner instance.
    */
 
   html5QrCode =
@@ -1347,9 +1864,8 @@ function startScanner() {
       function(errorMessage) {
 
         /*
-         * Ignore continuous scanner
-         * errors generated while camera
-         * is searching for a QR.
+         * Ignore normal continuous
+         * QR scanning messages.
          */
 
       }
@@ -1359,15 +1875,16 @@ function startScanner() {
     .catch(
       function(error) {
 
+        console.error(
+          "Camera start error:",
+          error
+        );
+
+
         showStatus(
           "error",
           "Camera Could Not Start",
           "Please allow camera permission and reload this page."
-        );
-
-
-        console.error(
-          error
         );
 
       }
@@ -1376,15 +1893,22 @@ function startScanner() {
 }
 
 
-/* ==========================================
+/* =========================================================
    STOP SCANNER
-   ========================================== */
+   ========================================================= */
 
 function stopScanner() {
 
   if (
-    html5QrCode
+    !html5QrCode
   ) {
+
+    return;
+
+  }
+
+
+  try {
 
     html5QrCode
       .stop()
@@ -1419,16 +1943,31 @@ function stopScanner() {
         }
       );
 
+  } catch (error) {
+
+    console.log(
+      "Scanner stop error:",
+      error
+    );
+
   }
 
 }
 
 
-/* ==========================================
+/* =========================================================
    SCAN NEXT CLIENT
-   ========================================== */
+   ========================================================= */
 
 function scanNext() {
+
+  currentQrToken =
+    null;
+
+
+  currentAction =
+    null;
+
 
   document.getElementById(
     "statusBox"
@@ -1442,22 +1981,85 @@ function scanNext() {
     "none";
 
 
+  document.getElementById(
+    "retryButton"
+  ).style.display =
+    "none";
+
+
   startScanner();
 
 }
 
 
-/* ==========================================
+/* =========================================================
+   RETRY CURRENT ACTION
+   ========================================================= */
+
+function retryCurrentAction() {
+
+  /*
+   * If we still have the QR token,
+   * retry the attendance verification
+   * without asking the employee to
+   * scan the QR again.
+   */
+
+  if (
+    currentQrToken &&
+    currentAction === "attendance"
+  ) {
+
+    isProcessing =
+      true;
+
+
+    showProcessing(
+      1
+    );
+
+
+    setTimeout(
+      function() {
+
+        verifyAttendance(
+          currentQrToken
+        );
+
+      },
+      80
+    );
+
+
+    return;
+
+  }
+
+
+  /*
+   * Otherwise simply restart scanner.
+   */
+
+  scanNext();
+
+}
+
+
+/* =========================================================
    PAGE LOAD
-   ========================================== */
+   ========================================================= */
 
 window.addEventListener(
   "load",
   function() {
 
     /*
-     * Load meeting information and
-     * start the camera simultaneously.
+     * IMPORTANT:
+     *
+     * Both operations start at the same time.
+     *
+     * Meeting loading does NOT block
+     * camera startup.
      */
 
     loadMeeting();
