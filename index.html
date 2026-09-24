@@ -670,25 +670,14 @@ function loadMeeting() {
 
 
         /*
-         * IMPORTANT:
-         *
-         * Apps Script returns:
+         * Actual Apps Script response:
          *
          * {
          *   success: true,
-         *   meetingId: "M001",
-         *   topic: "...",
-         *   date: "..."
+         *   meetingId: "M004",
+         *   topic: "Financial Freedom",
+         *   date: "01 October 2026"
          * }
-         *
-         * Therefore we read:
-         *
-         * response.topic
-         * response.date
-         *
-         * and NOT:
-         *
-         * response.meeting.topic
          */
 
         if (
@@ -858,18 +847,45 @@ function verifyAttendance(
         }
 
 
+        /*
+         * ACTUAL APPS SCRIPT RESPONSE FORMAT
+         *
+         * Example:
+         *
+         * {
+         *   success: true,
+         *   status: "DUPLICATE",
+         *   message: "Already Checked In",
+         *   registrationId: "M004-002",
+         *   meetingId: "M004",
+         *   name: "pppppppppp",
+         *   checkInTime: "..."
+         * }
+         *
+         * Therefore we use:
+         *
+         * response.status
+         * response.name
+         *
+         * NOT:
+         *
+         * response.type
+         * response.clientName
+         */
+
+
         /* ==================================
-           ALREADY CHECKED IN
+           DUPLICATE
            ================================== */
 
         if (
-          response.type === "DUPLICATE"
+          response.status === "DUPLICATE"
         ) {
 
           showStatus(
             "duplicate",
             "Already Checked In",
-            (response.clientName || "Client") +
+            (response.name || "Client") +
             "<br><br>" +
             "Registration ID: " +
             (response.registrationId || "-") +
@@ -883,11 +899,11 @@ function verifyAttendance(
 
 
         /* ==================================
-           INVALID QR
+           INVALID
            ================================== */
 
         if (
-          response.type === "INVALID"
+          response.status === "INVALID"
         ) {
 
           showStatus(
@@ -903,36 +919,17 @@ function verifyAttendance(
 
 
         /* ==================================
-           BACKEND ERROR
-           ================================== */
-
-        if (
-          response.success === false
-        ) {
-
-          showStatus(
-            "error",
-            "Unable to Verify",
-            response.message ||
-            "Please try scanning the QR code again."
-          );
-
-          return;
-
-        }
-
-
-        /* ==================================
-           SUCCESSFUL ATTENDANCE
+           SUCCESSFUL CHECK-IN
            ==================================
 
-           We intentionally check success:true
-           instead of requiring:
+           Apps Script uses:
 
-           response.type === "SUCCESS"
+           success: true
 
-           because your Apps Script is already
-           successfully recording attendance.
+           for a successful check-in.
+
+           We therefore don't require a
+           separate "type" field.
         */
 
         if (
@@ -942,13 +939,15 @@ function verifyAttendance(
           showStatus(
             "success",
             "Attendance Confirmed",
-            (response.clientName || "Client") +
+            (response.name || "Client") +
             "<br><br>" +
             "Registration ID: " +
             (response.registrationId || "-") +
             "<br>" +
             "Check-in Time: " +
-            (response.checkInTime || "Just now")
+            formatCheckInTime(
+              response.checkInTime
+            )
           );
 
           return;
@@ -957,7 +956,7 @@ function verifyAttendance(
 
 
         /* ==================================
-           UNKNOWN RESPONSE
+           BACKEND ERROR
            ================================== */
 
         showStatus(
@@ -1028,6 +1027,59 @@ function verifyAttendance(
   document.body.appendChild(
     script
   );
+
+}
+
+
+/* ==========================================
+   FORMAT CHECK-IN TIME
+   ========================================== */
+
+function formatCheckInTime(
+  value
+) {
+
+  if (!value) {
+
+    return "Just now";
+
+  }
+
+
+  try {
+
+    const date =
+      new Date(value);
+
+
+    if (
+      isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return value;
+
+    }
+
+
+    return date.toLocaleString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+
+  } catch (error) {
+
+    return value;
+
+  }
 
 }
 
@@ -1128,6 +1180,29 @@ function startScanner() {
     "none";
 
 
+  /*
+   * If an old scanner instance exists,
+   * don't create another one.
+   */
+
+  if (html5QrCode) {
+
+    try {
+
+      html5QrCode.clear();
+
+    } catch (error) {
+
+      console.log(
+        "Scanner clear:",
+        error
+      );
+
+    }
+
+  }
+
+
   html5QrCode =
     new Html5Qrcode(
       "reader"
@@ -1203,7 +1278,18 @@ function stopScanner() {
       .then(
         function() {
 
-          html5QrCode.clear();
+          try {
+
+            html5QrCode.clear();
+
+          } catch (error) {
+
+            console.log(
+              "Scanner clear:",
+              error
+            );
+
+          }
 
         }
       )
