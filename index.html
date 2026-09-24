@@ -648,7 +648,7 @@ let isProcessing = false;
 
 
 /* ==========================================
-   LOAD MEETING
+   LOAD CURRENT MEETING
    ========================================== */
 
 function loadMeeting() {
@@ -663,25 +663,52 @@ function loadMeeting() {
 
       try {
 
+        console.log(
+          "Meeting API response:",
+          response
+        );
+
+
+        /*
+         * IMPORTANT:
+         *
+         * Apps Script returns:
+         *
+         * {
+         *   success: true,
+         *   meetingId: "M001",
+         *   topic: "...",
+         *   date: "..."
+         * }
+         *
+         * Therefore we read:
+         *
+         * response.topic
+         * response.date
+         *
+         * and NOT:
+         *
+         * response.meeting.topic
+         */
+
         if (
           response &&
-          response.success &&
-          response.meeting
+          response.success === true
         ) {
 
           document.getElementById(
             "meetingTopic"
           ).textContent =
-            response.meeting.topic ||
+            response.topic ||
             "Client Meeting";
 
 
           document.getElementById(
             "meetingDate"
           ).textContent =
-            response.meeting.date
+            response.date
               ? "Date: " +
-                response.meeting.date
+                response.date
               : "";
 
         } else {
@@ -698,6 +725,18 @@ function loadMeeting() {
             "";
 
         }
+
+      } catch (error) {
+
+        console.error(
+          "Meeting display error:",
+          error
+        );
+
+        document.getElementById(
+          "meetingTopic"
+        ).textContent =
+          "Meeting information unavailable";
 
       } finally {
 
@@ -759,7 +798,9 @@ function onScanSuccess(
 ) {
 
   if (isProcessing) {
+
     return;
+
   }
 
 
@@ -794,46 +835,32 @@ function verifyAttendance(
 
       try {
 
+        console.log(
+          "Attendance API response:",
+          response
+        );
+
+
+        /* ==================================
+           NO RESPONSE
+           ================================== */
+
         if (!response) {
 
           showStatus(
             "error",
-            "Something went wrong",
+            "Something Went Wrong",
             "No response was received from the attendance system."
           );
 
           return;
+
         }
 
 
-        /* ==============================
-           SUCCESS
-           ============================== */
-
-        if (
-          response.success === true &&
-          response.type === "SUCCESS"
-        ) {
-
-          showStatus(
-            "success",
-            "Attendance Confirmed",
-            response.clientName +
-            "<br><br>" +
-            "Registration ID: " +
-            response.registrationId +
-            "<br>" +
-            "Check-in Time: " +
-            response.checkInTime
-          );
-
-          return;
-        }
-
-
-        /* ==============================
+        /* ==================================
            ALREADY CHECKED IN
-           ============================== */
+           ================================== */
 
         if (
           response.type === "DUPLICATE"
@@ -842,21 +869,22 @@ function verifyAttendance(
           showStatus(
             "duplicate",
             "Already Checked In",
-            response.clientName +
+            (response.clientName || "Client") +
             "<br><br>" +
             "Registration ID: " +
-            response.registrationId +
+            (response.registrationId || "-") +
             "<br><br>" +
             "This client has already been marked present."
           );
 
           return;
+
         }
 
 
-        /* ==============================
+        /* ==================================
            INVALID QR
-           ============================== */
+           ================================== */
 
         if (
           response.type === "INVALID"
@@ -866,21 +894,91 @@ function verifyAttendance(
             "invalid",
             "Invalid QR Code",
             response.message ||
-            "This QR code is not valid for the meeting."
+            "This QR code is not valid."
           );
 
           return;
+
         }
 
 
-        /* ==============================
-           ERROR
-           ============================== */
+        /* ==================================
+           BACKEND ERROR
+           ================================== */
+
+        if (
+          response.success === false
+        ) {
+
+          showStatus(
+            "error",
+            "Unable to Verify",
+            response.message ||
+            "Please try scanning the QR code again."
+          );
+
+          return;
+
+        }
+
+
+        /* ==================================
+           SUCCESSFUL ATTENDANCE
+           ==================================
+
+           We intentionally check success:true
+           instead of requiring:
+
+           response.type === "SUCCESS"
+
+           because your Apps Script is already
+           successfully recording attendance.
+        */
+
+        if (
+          response.success === true
+        ) {
+
+          showStatus(
+            "success",
+            "Attendance Confirmed",
+            (response.clientName || "Client") +
+            "<br><br>" +
+            "Registration ID: " +
+            (response.registrationId || "-") +
+            "<br>" +
+            "Check-in Time: " +
+            (response.checkInTime || "Just now")
+          );
+
+          return;
+
+        }
+
+
+        /* ==================================
+           UNKNOWN RESPONSE
+           ================================== */
 
         showStatus(
           "error",
           "Unable to Verify",
           response.message ||
+          "Please try scanning the QR code again."
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "Attendance response error:",
+          error
+        );
+
+
+        showStatus(
+          "error",
+          "Unable to Verify",
           "Please try scanning the QR code again."
         );
 
@@ -973,19 +1071,18 @@ function showStatus(
     type;
 
 
-  if (type === "success") {
-
-    icon.textContent = "✓";
-
-  } else if (
+  if (
+    type === "success" ||
     type === "duplicate"
   ) {
 
-    icon.textContent = "✓";
+    icon.textContent =
+      "✓";
 
   } else {
 
-    icon.textContent = "!";
+    icon.textContent =
+      "!";
 
   }
 
@@ -1063,7 +1160,9 @@ function startScanner() {
       onScanSuccess,
 
       function(errorMessage) {
-        // Ignore continuous scan errors.
+
+        // Ignore continuous scanner errors.
+
       }
 
     )
@@ -1077,7 +1176,10 @@ function startScanner() {
           "Please allow camera permission and reload this page."
         );
 
-        console.error(error);
+
+        console.error(
+          error
+        );
 
       }
     );
