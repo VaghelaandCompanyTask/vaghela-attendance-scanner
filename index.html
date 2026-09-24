@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Vaghela & Company - Attendance</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f7f9fb;
+      color: #111;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 24px 18px 40px;
+    }
+
+    .brand {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 700;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 22px;
+    }
+
+    #reader {
+      width: 100%;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .status {
+      display: none;
+      margin-top: 20px;
+      padding: 22px;
+      border-radius: 14px;
+      text-align: center;
+    }
+
+    .status.success {
+      display: block;
+      background: #e9f8ee;
+      border: 1px solid #9ad6ad;
+    }
+
+    .status.duplicate {
+      display: block;
+      background: #fff4dc;
+      border: 1px solid #e7c46c;
+    }
+
+    .status.invalid {
+      display: block;
+      background: #fdeaea;
+      border: 1px solid #e2a0a0;
+    }
+
+    .status.error {
+      display: block;
+      background: #fdeaea;
+      border: 1px solid #e2a0a0;
+    }
+
+    .icon {
+      font-size: 42px;
+      margin-bottom: 8px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .details {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: #111;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .camera-error {
+      margin-top: 20px;
+      padding: 18px;
+      background: #fdeaea;
+      border: 1px solid #e2a0a0;
+      border-radius: 12px;
+      text-align: center;
+      line-height: 1.6;
+      display: none;
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+  <div class="container">
+
+    <div class="brand">
+      Vaghela & Company
+    </div>
+
+    <div class="subtitle">
+      Attendance Scanner
+    </div>
+
+
+    <div id="reader"></div>
+
+
+    <div
+      id="cameraError"
+      class="camera-error"
+    >
+      Unable to access camera.<br>
+      Please allow camera permission and reload this page.
+    </div>
+
+
+    <div
+      id="status"
+      class="status"
+    >
+
+      <div
+        id="statusIcon"
+        class="icon"
+      ></div>
+
+      <div
+        id="statusTitle"
+        class="title"
+      ></div>
+
+      <div
+        id="statusDetails"
+        class="details"
+      ></div>
+
+      <button onclick="scanNext()">
+        Scan Next Client
+      </button>
+
+    </div>
+
+  </div>
+
+
+<script>
+
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbwpbh3s-hyOGkppRp1HnfCSw-rIcSraL4OXoOngDeLMSm52k2Jp0m8nmRoLM-9K3ZWAiA/exec";
+
+
+let html5QrCode = null;
+let scanning = false;
+let processing = false;
+
+
+// ==========================================
+// START SCANNER
+// ==========================================
+
+function startScanner() {
+
+  document.getElementById("status").style.display = "none";
+
+  document.getElementById("cameraError").style.display = "none";
+
+  processing = false;
+
+  html5QrCode = new Html5Qrcode("reader");
+
+  html5QrCode.start(
+
+    { facingMode: "environment" },
+
+    {
+      fps: 10,
+      qrbox: {
+        width: 250,
+        height: 250
+      }
+    },
+
+    onScanSuccess,
+
+    function(errorMessage) {
+      // Normal scanning errors are ignored.
+    }
+
+  ).then(function() {
+
+    scanning = true;
+
+  }).catch(function(error) {
+
+    console.error(error);
+
+    document.getElementById("cameraError").style.display = "block";
+
+  });
+
+}
+
+
+// ==========================================
+// QR SCANNED
+// ==========================================
+
+function onScanSuccess(decodedText) {
+
+  if (processing) {
+    return;
+  }
+
+  processing = true;
+
+  stopScanner();
+
+  checkAttendance(decodedText);
+}
+
+
+// ==========================================
+// STOP CAMERA
+// ==========================================
+
+function stopScanner() {
+
+  if (!html5QrCode || !scanning) {
+    return;
+  }
+
+  html5QrCode.stop()
+    .then(function() {
+
+      scanning = false;
+
+    })
+    .catch(function(error) {
+
+      console.error(error);
+
+    });
+
+}
+
+
+// ==========================================
+// SEND TOKEN TO APPS SCRIPT
+// ==========================================
+
+function checkAttendance(qrToken) {
+
+  window.vaghelaAttendanceResult = function(result) {
+
+    showResult(result);
+
+    delete window.vaghelaAttendanceResult;
+
+  };
+
+
+  const script = document.createElement("script");
+
+  script.src =
+    APPS_SCRIPT_URL +
+    "?api=checkin" +
+    "&token=" +
+    encodeURIComponent(qrToken) +
+    "&_=" +
+    Date.now();
+
+
+  script.onerror = function() {
+
+    showResult({
+      success: false,
+      type: "ERROR",
+      message: "Unable to contact attendance server."
+    });
+
+  };
+
+
+  document.body.appendChild(script);
+
+}
+
+
+// ==========================================
+// SHOW RESULT
+// ==========================================
+
+function showResult(result) {
+
+  const status = document.getElementById("status");
+  const icon = document.getElementById("statusIcon");
+  const title = document.getElementById("statusTitle");
+  const details = document.getElementById("statusDetails");
+
+  status.className = "status";
+
+  if (result.type === "SUCCESS") {
+
+    status.classList.add("success");
+
+    icon.textContent = "✓";
+
+    title.textContent = "Attendance Confirmed";
+
+    details.innerHTML =
+      "<strong>" +
+      escapeHtml(result.clientName) +
+      "</strong><br>" +
+
+      "Registration ID: " +
+      escapeHtml(result.registrationId) +
+      "<br>" +
+
+      "Meeting: " +
+      escapeHtml(result.meetingId) +
+      "<br>" +
+
+      "Check-in: " +
+      escapeHtml(result.checkInTime);
+
+  }
+
+
+  else if (result.type === "DUPLICATE") {
+
+    status.classList.add("duplicate");
+
+    icon.textContent = "⚠";
+
+    title.textContent = "Already Checked In";
+
+    details.innerHTML =
+      "<strong>" +
+      escapeHtml(result.clientName) +
+      "</strong><br>" +
+
+      "Registration ID: " +
+      escapeHtml(result.registrationId) +
+      "<br><br>" +
+
+      "This client has already been marked present.";
+
+  }
+
+
+  else if (result.type === "INVALID") {
+
+    status.classList.add("invalid");
+
+    icon.textContent = "✕";
+
+    title.textContent = "Invalid QR Code";
+
+    details.textContent =
+      result.message || "This QR code is not valid.";
+
+  }
+
+
+  else {
+
+    status.classList.add("error");
+
+    icon.textContent = "⚠";
+
+    title.textContent = "Something Went Wrong";
+
+    details.textContent =
+      result.message || "Please try again.";
+
+  }
+
+
+  status.style.display = "block";
+
+}
+
+
+// ==========================================
+// SCAN NEXT
+// ==========================================
+
+function scanNext() {
+
+  document.getElementById("status").style.display = "none";
+
+  processing = false;
+
+  startScanner();
+
+}
+
+
+// ==========================================
+// HTML ESCAPE
+// ==========================================
+
+function escapeHtml(value) {
+
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+
+// START
+
+startScanner();
+
+</script>
+
+</body>
+
+</html>
